@@ -11,6 +11,7 @@ Ainsi, les modifs des fichiers seront extérieur au zip.
 
 Le zip sert seulement à avoir l'environnement de départ.
 
+Test du push/pull
 
 ###############################################################
 Zybo
