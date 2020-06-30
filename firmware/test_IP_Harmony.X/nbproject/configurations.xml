@@ -10,7 +10,6 @@
           <itemPath>../src/ssd.h</itemPath>
           <itemPath>../src/i2c.h</itemPath>
           <itemPath>../src/lcd.h</itemPath>
-          <itemPath>accel.h</itemPath>
           <itemPath>rgbled.h</itemPath>
         </logicalFolder>
         <logicalFolder name="f1" displayName="system_config" projectFiles="true">

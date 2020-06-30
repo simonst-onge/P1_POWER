@@ -32,7 +32,25 @@
 #define ACL_CTRL_REG5       0x2E
 #define ACL_DEVICE_ID       0x0D 
 #define ACL_XYZDATACFG      0x0E 
+typedef enum
+{
+    ///
+	Init,
+	QUA1,
+    QUA2,
+    QUA3,
+    QUA4,
+            ////
+	
+} ACC_STATES;
 
+typedef struct
+{
+    ///
+    ACC_STATES state;
+    ////
+    
+} ACC_DATA;
 // function prototypes
 void ACL_Init();
 void accel_tasks();

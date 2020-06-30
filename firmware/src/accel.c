@@ -44,18 +44,25 @@ float fGRangeLSB;   // global variable used to pre-compute the value in g corres
 static volatile int Flag_1s = 0;
 
 volatile int Flag_rgb = 0;
-
+int reset = 0;
 int compteur_flag_accel=0;
-
+float per_rotat = 0;
 int indexPaquet=0;
-
+int e = 0;
+int rpm = 0;
 int tab[121];
+// compteur d'échantillon total 
+int cpt_ech = 0;
+// compteur_rotations
+int cpt_rot = 0;
 
 uint8_t accel_buffer[accel_buf_length];
 int32_t receive_buff[3][121];
 //Valeur filtrées provenant de la Zybo
-volatile unsigned char accXf, accYf, accZf; // vérifier le rooting pour les variables 
+volatile signed int accXf, accYf, accZf; 
+
 ACC_DATA accl;
+
 /* ------------------------------------------------------------ */
 /***	ACL_Init
 **
@@ -94,7 +101,8 @@ void ACL_Init()
     INTCONbits.INT4EP = 0; //change sur un rising edge
     IPC4bits.INT4IP=1;  //Priorité
     IEC0bits.INT4IE = 1; //enable interrupt
-   
+    
+    accl.state = Init;
    
 }
 
@@ -205,62 +213,96 @@ void accel_tasks()
 void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont filtrées
 {
     
-     if(UDP_Receive_Packet == true)
-     {
-        memcpy(receive_buff[2],receive_buff[1],484);
-        memcpy(receive_buff[1],receive_buff[0],484);
-        memcpy(receive_buff[0],UDP_Receive_Buffer,484);
-         
-     }
+    if(UDP_Receive_Packet == true)
+    {
+       memcpy(receive_buff[2],receive_buff[1],484);
+       memcpy(receive_buff[1],receive_buff[0],484);
+       memcpy(receive_buff[0],UDP_Receive_Buffer,484);
+       e = 0;
+
+    }
+    
+    if (reset == 1){
+        cpt_rot = 0;
+        cpt_ech = 0;
+        e = 0;
+        accXf = 0;
+        accYf = 0;
+        accZf = 0;
+        accl.state = Init;
+    }
+    if(receive_buff[2][0] != 0){
+        accXf = (signed int)receive_buff[2][e+1]/8;
+        accYf = (signed int)receive_buff[2][e+41]/8;
+        accZf = (signed int)receive_buff[2][e+81]/8;
+    }
+    else{
+        accXf = 0;
+        accYf = 0;
+        accZf = 0;
+    }
+    
+    if (e == 120){
+        e = 0;
+    }
     
     
-    // compteur d'échantillon total * période aquisition = temps 1 rotation
-    int cpt_ech;
-    // flag_rotation
-    int flag_rot;
-    //if (){
-    // reset et changement d'état
-    //}
-    //accXf, accYf, accZf
     cpt_ech ++;
-    switch (accl.state)
-            case (Init) :
-                if (accXf > 0 && accYf > 0) {
-                    accl.state = QUA1;
-                }
-                else {
-                }
-            case (QUA1) :
-                if (accXf < 0 && accYf > 0) {
-                     accl.state = QUA2;
-                }
-                else {
-                }
-            case (QUA2) :
-                if (accXf < 0 && accYf < 0) {
-                     accl.state = QUA3;
-                }
-                else {
-                }
-            case (QUA3) :
-                if (accXf > 0 && accYf < 0) {
-                     accl.state = QUA4;
-                }
-                else {
-                }
-            case (QUA4) :
-                if (accXf > 0 && accYf > 0) {
-                     accl.state = QUA1;
-                     flag_rot = 1;
-                    // calcul temps pour une rotation avec le cpt_rot
-                    // compteur d'échantillon total * période aquisition = temps 1 rotation
-                }
-                else {
-                }
     
-    
-    
-    
+    switch (accl.state){
+        case Init:
+            if (accXf > 0 && accYf > 0) {
+                accl.state = QUA1;
+                e++;
+            }
+            else {
+                accl.state = Init;
+            }
+           
+            break;
+        case QUA1:
+            if (accXf < 0 && accYf > 0) {
+                 accl.state = QUA2;
+            }
+            else {
+                accl.state = QUA1;
+            }
+            e++;
+            break;
+        case QUA2:
+            if (accXf < 0 && accYf < 0) {
+                 accl.state = QUA3;
+            }
+            else {
+                accl.state = QUA2;
+            }
+            e++;
+            break;
+        case (QUA3) :
+            if (accXf > 0 && accYf < 0) {
+                 accl.state = QUA4;
+            }
+            else {
+                accl.state = QUA3;
+            }
+            e++;
+            break;
+        case QUA4:
+            if (accXf > 0 && accYf > 0) {
+                accl.state = QUA1;
+                cpt_rot++;
+                // compteur d'échantillon total * période aquisition = temps 1 rotation
+                per_rotat = cpt_ech * (1/100);
+                rpm = 60 / per_rotat;
+                cpt_ech = 0;
+            }
+            else {
+                accl.state = QUA4;
+            }
+            e++;
+            break;
+    }
+              
 }
 
 

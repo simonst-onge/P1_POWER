@@ -35,17 +35,22 @@
 
 typedef enum
 {
+    ///
 	Init,
 	QUA1,
     QUA2,
     QUA3,
     QUA4,
+            ////
 	
 } ACC_STATES;
 
 typedef struct
 {
+    ///
     ACC_STATES state;
+    ////
+    
 } ACC_DATA;
 
 // function prototypes
