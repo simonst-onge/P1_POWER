@@ -265,7 +265,7 @@ void _UDP_ClientTasks()
                 {
                     char string[10];
                     sprintf(string," %d ",UDP_Receive_Buffer[i]);
-                    SYS_CONSOLE_PRINT(string);
+                    //SYS_CONSOLE_PRINT(string);
                 }
                 SYS_CONSOLE_PRINT("\r\n");              
                 appData.clientState = UDP_TCPIP_WAITING_FOR_COMMAND;

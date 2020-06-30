@@ -232,6 +232,7 @@ void MAIN_Tasks ( void )
             accel_tasks();
             UDP_Tasks();
             //ManageSwitches();
+            accel_rotation();
             RGBLED_Tasks();
             LED0Toggle();
             JB1Toggle();        //LED heartbeat

@@ -43,13 +43,13 @@ float fGRangeLSB;   // global variable used to pre-compute the value in g corres
 
 static volatile int Flag_1s = 0;
 
-volatile int Flag_rgb = 0;
+volatile int Flag_rgb, Flag_acc = 0;
 int reset = 0;
 int compteur_flag_accel=0;
 float per_rotat = 0;
 int indexPaquet=0;
 int e = 0;
-int rpm = 0;
+float rpm = 0;
 int tab[121];
 // compteur d'échantillon total 
 int cpt_ech = 0;
@@ -94,7 +94,7 @@ void ACL_Init()
     ACL_SetRegister(ACL_CTRL_REG4, 0x01); //interrupt enable
     ACL_SetRegister(ACL_CTRL_REG5, 0);
     ACL_GetRegister(ACL_INT_SOURCE);
-    ACL_SetRegister(ACL_CTRL_REG1, 0x09); //400 Hz
+    ACL_SetRegister(ACL_CTRL_REG1, 0x19); //400 Hz
    
     //pic32
     IFS0bits.INT4IF = 0; //flag initialisé à 0
@@ -131,7 +131,8 @@ void ACL_ConfigurePins()
 void __ISR(_EXTERNAL_4_VECTOR, IPL2AUTO) ACL_ISR(void)
 {
    Flag_1s = 1;            //indique à la boucle principale qu'on doit traiter
-   Flag_rgb = 1;            //indique à la boucle principale qu'on doit traiter
+   Flag_rgb = 1;
+   Flag_acc = 1; //indique à la boucle principale qu'on doit traiter
    IFS0bits.INT4IF = 0;     // clear interrupt flag
    
    ACL_ReadRawValues(accel_buffer);
@@ -212,7 +213,12 @@ void accel_tasks()
 
 void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont filtrées
 {
+    if (Flag_acc == 1){
+        Flag_acc = 0;
+        cpt_ech ++;
+        e ++;
     
+    }
     if(UDP_Receive_Packet == true)
     {
        memcpy(receive_buff[2],receive_buff[1],484);
@@ -240,6 +246,8 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
         accXf = 0;
         accYf = 0;
         accZf = 0;
+        cpt_ech = 0;
+        e = 0;
     }
     
     if (e == 120){
@@ -247,13 +255,13 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
     }
     
     
-    cpt_ech ++;
+    
     
     switch (accl.state){
         case Init:
             if (accXf > 0 && accYf > 0) {
                 accl.state = QUA1;
-                e++;
+                
             }
             else {
                 accl.state = Init;
@@ -267,7 +275,7 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
             else {
                 accl.state = QUA1;
             }
-            e++;
+            
             break;
         case QUA2:
             if (accXf < 0 && accYf < 0) {
@@ -276,7 +284,7 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
             else {
                 accl.state = QUA2;
             }
-            e++;
+            
             break;
         case (QUA3) :
             if (accXf > 0 && accYf < 0) {
@@ -285,7 +293,7 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
             else {
                 accl.state = QUA3;
             }
-            e++;
+            
             break;
         case QUA4:
             if (accXf > 0 && accYf > 0) {
@@ -293,13 +301,15 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
                 cpt_rot++;
                 // compteur d'échantillon total * période aquisition = temps 1 rotation
                 per_rotat = cpt_ech * (1/100);
+                SYS_CONSOLE_PRINT("\r\n RPM \r\n");
                 rpm = 60 / per_rotat;
                 cpt_ech = 0;
+                SYS_CONSOLE_PRINT("%.3f \r\n",rpm);
             }
             else {
                 accl.state = QUA4;
             }
-            e++;
+            
             break;
     }
               
