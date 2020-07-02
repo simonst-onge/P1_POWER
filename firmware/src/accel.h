@@ -54,6 +54,7 @@ typedef struct
 // function prototypes
 void ACL_Init();
 void accel_tasks();
+void accel_rotation(void);
 void ACL_ReadRawValues(unsigned char *rgRawVals);
 void ACL_ReadGValues(float *rgGVals);
 unsigned char ACL_SetRange(unsigned char bRange);

@@ -213,6 +213,7 @@ void accel_tasks()
 
 void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont filtrées
 {
+    
     if (Flag_acc == 1){
         Flag_acc = 0;
         cpt_ech ++;
@@ -259,7 +260,9 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
     
     switch (accl.state){
         case Init:
+            
             if (accXf > 0 && accYf > 0) {
+                SYS_CONSOLE_PRINT("\r\n initialisation \r\n");
                 accl.state = QUA1;
                 
             }
@@ -269,7 +272,9 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
            
             break;
         case QUA1:
+           
             if (accXf < 0 && accYf > 0) {
+                 SYS_CONSOLE_PRINT("\r\n Quadrant 1 \r\n");
                  accl.state = QUA2;
             }
             else {
@@ -278,7 +283,9 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
             
             break;
         case QUA2:
+            
             if (accXf < 0 && accYf < 0) {
+                SYS_CONSOLE_PRINT("\r\n Quadrant 2 \r\n");
                  accl.state = QUA3;
             }
             else {
@@ -287,7 +294,9 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
             
             break;
         case (QUA3) :
+            
             if (accXf > 0 && accYf < 0) {
+                SYS_CONSOLE_PRINT("\r\n Quadrant 3 \r\n");
                  accl.state = QUA4;
             }
             else {
@@ -296,15 +305,17 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
             
             break;
         case QUA4:
+            
             if (accXf > 0 && accYf > 0) {
+                SYS_CONSOLE_PRINT("\r\n Quadrant 4 \r\n");
                 accl.state = QUA1;
                 cpt_rot++;
                 // compteur d'échantillon total * période aquisition = temps 1 rotation
                 per_rotat = cpt_ech * (1/100);
-                SYS_CONSOLE_PRINT("\r\n RPM \r\n");
+                SYS_CONSOLE_PRINT("\r\n compteur de rotation \r\n");
                 rpm = 60 / per_rotat;
                 cpt_ech = 0;
-                SYS_CONSOLE_PRINT("%.3f \r\n",rpm);
+                SYS_CONSOLE_PRINT("%d \r\n",cpt_rot);
             }
             else {
                 accl.state = QUA4;
