@@ -46,10 +46,10 @@ static volatile int Flag_1s = 0;
 volatile int Flag_rgb, Flag_acc = 0;
 int reset = 0;
 int compteur_flag_accel=0;
-float per_rotat = 0;
+int per_rotat = 0;
 int indexPaquet=0;
 int e = 0;
-float rpm = 0;
+int rpm = 0;
 int tab[121];
 // compteur d'échantillon total 
 int cpt_ech = 0;
@@ -94,7 +94,7 @@ void ACL_Init()
     ACL_SetRegister(ACL_CTRL_REG4, 0x01); //interrupt enable
     ACL_SetRegister(ACL_CTRL_REG5, 0);
     ACL_GetRegister(ACL_INT_SOURCE);
-    ACL_SetRegister(ACL_CTRL_REG1, 0x19); //400 Hz
+    ACL_SetRegister(ACL_CTRL_REG1, 0x11); //200Hz
    
     //pic32
     IFS0bits.INT4IF = 0; //flag initialisé à 0
@@ -213,7 +213,7 @@ void accel_tasks()
 
 void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont filtrées
 {
-    
+    int negatif = 536870000;
     if (Flag_acc == 1){
         Flag_acc = 0;
         cpt_ech ++;
@@ -239,9 +239,9 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
         accl.state = Init;
     }
     if(receive_buff[2][0] != 0){
-        accXf = (signed int)receive_buff[2][e+1]/8;
-        accYf = (signed int)receive_buff[2][e+41]/8;
-        accZf = (signed int)receive_buff[2][e+81]/8;
+        accXf = receive_buff[2][e+1]; // divise par 8 deux fois ?
+        accYf = receive_buff[2][e+41];
+        accZf = receive_buff[2][e+81];
     }
     else{
         accXf = 0;
@@ -261,7 +261,7 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
     switch (accl.state){
         case Init:
             
-            if (accXf > 0 && accYf > 0) {
+            if (accXf < negatif && accYf < negatif) {
                 SYS_CONSOLE_PRINT("\r\n initialisation \r\n");
                 accl.state = QUA1;
                 
@@ -273,7 +273,7 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
             break;
         case QUA1:
            
-            if (accXf < 0 && accYf > 0) {
+            if (accXf > negatif && accYf < negatif) {
                  SYS_CONSOLE_PRINT("\r\n Quadrant 1 \r\n");
                  accl.state = QUA2;
             }
@@ -284,7 +284,7 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
             break;
         case QUA2:
             
-            if (accXf < 0 && accYf < 0) {
+            if (accXf > negatif && accYf > negatif) {
                 SYS_CONSOLE_PRINT("\r\n Quadrant 2 \r\n");
                  accl.state = QUA3;
             }
@@ -295,7 +295,7 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
             break;
         case (QUA3) :
             
-            if (accXf > 0 && accYf < 0) {
+            if (accXf < negatif && accYf > negatif) {
                 SYS_CONSOLE_PRINT("\r\n Quadrant 3 \r\n");
                  accl.state = QUA4;
             }
@@ -306,16 +306,20 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
             break;
         case QUA4:
             
-            if (accXf > 0 && accYf > 0) {
+            if (accXf < negatif && accYf < negatif) {
                 SYS_CONSOLE_PRINT("\r\n Quadrant 4 \r\n");
                 accl.state = QUA1;
                 cpt_rot++;
                 // compteur d'échantillon total * période aquisition = temps 1 rotation
-                per_rotat = cpt_ech * (1/100);
+                per_rotat = cpt_ech * 10; 
+                
                 SYS_CONSOLE_PRINT("\r\n compteur de rotation \r\n");
-                rpm = 60 / per_rotat;
-                cpt_ech = 0;
                 SYS_CONSOLE_PRINT("%d \r\n",cpt_rot);
+                rpm = 60000 / per_rotat;
+                SYS_CONSOLE_PRINT("\r\n rotation par minute \r\n");
+                SYS_CONSOLE_PRINT("%d \r\n ",rpm);
+                cpt_ech = 0;
+               
             }
             else {
                 accl.state = QUA4;
