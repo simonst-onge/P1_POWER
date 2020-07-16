@@ -94,7 +94,7 @@ void ACL_Init()
     ACL_SetRegister(ACL_CTRL_REG4, 0x01); //interrupt enable
     ACL_SetRegister(ACL_CTRL_REG5, 0);
     ACL_GetRegister(ACL_INT_SOURCE);
-    ACL_SetRegister(ACL_CTRL_REG1, 0x11); //200Hz
+    ACL_SetRegister(ACL_CTRL_REG1, 0x29); //12.5
    
     //pic32
     IFS0bits.INT4IF = 0; //flag initialisé à 0
@@ -213,7 +213,7 @@ void accel_tasks()
 
 void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont filtrées
 {
-    int negatif = 536870000;
+//    int negatif = 0;
     if (Flag_acc == 1){
         Flag_acc = 0;
         cpt_ech ++;
@@ -236,12 +236,12 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
         accXf = 0;
         accYf = 0;
         accZf = 0;
-        accl.state = Init;
+//        accl.state = Init;
     }
     if(receive_buff[2][0] != 0){
-        accXf = receive_buff[2][e+1]; // divise par 8 deux fois ?
-        accYf = receive_buff[2][e+41];
-        accZf = receive_buff[2][e+81];
+        accXf = (signed int)receive_buff[2][e+1]; 
+        accYf = (signed int)receive_buff[2][e+41];
+        accZf = (signed int)receive_buff[2][e+81];
     }
     else{
         accXf = 0;
@@ -254,79 +254,103 @@ void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont fil
     if (e == 120){
         e = 0;
     }
-    
-    
-    
-    
-    switch (accl.state){
-        case Init:
-            
-            if (accXf < negatif && accYf < negatif) {
-                SYS_CONSOLE_PRINT("\r\n initialisation \r\n");
-                accl.state = QUA1;
-                
-            }
-            else {
-                accl.state = Init;
-            }
-           
-            break;
-        case QUA1:
-           
-            if (accXf > negatif && accYf < negatif) {
-                 SYS_CONSOLE_PRINT("\r\n Quadrant 1 \r\n");
-                 accl.state = QUA2;
-            }
-            else {
-                accl.state = QUA1;
-            }
-            
-            break;
-        case QUA2:
-            
-            if (accXf > negatif && accYf > negatif) {
-                SYS_CONSOLE_PRINT("\r\n Quadrant 2 \r\n");
-                 accl.state = QUA3;
-            }
-            else {
-                accl.state = QUA2;
-            }
-            
-            break;
-        case (QUA3) :
-            
-            if (accXf < negatif && accYf > negatif) {
-                SYS_CONSOLE_PRINT("\r\n Quadrant 3 \r\n");
-                 accl.state = QUA4;
-            }
-            else {
-                accl.state = QUA3;
-            }
-            
-            break;
-        case QUA4:
-            
-            if (accXf < negatif && accYf < negatif) {
-                SYS_CONSOLE_PRINT("\r\n Quadrant 4 \r\n");
-                accl.state = QUA1;
-                cpt_rot++;
-                // compteur d'échantillon total * période aquisition = temps 1 rotation
-                per_rotat = cpt_ech * 10; 
-                
-                SYS_CONSOLE_PRINT("\r\n compteur de rotation \r\n");
-                SYS_CONSOLE_PRINT("%d \r\n",cpt_rot);
-                rpm = 60000 / per_rotat;
-                SYS_CONSOLE_PRINT("\r\n rotation par minute \r\n");
-                SYS_CONSOLE_PRINT("%d \r\n ",rpm);
-                cpt_ech = 0;
-               
-            }
-            else {
-                accl.state = QUA4;
-            }
-            
-            break;
+
+    ///////////////////////////////////////////////////////////////////
+    // sommation pour l'intégrale de parcours 
+    int y = 0;
+    int z = 0;
+    int i = 0;
+    int dy, dz = 400;
+    int dyn, dzn = -400;
+    for (i = 0; i < 40; i++){
+        y += (signed int)receive_buff[2][i+41];
+        z += (signed int)receive_buff[2][i+81];
     }
+    if ((dyn <= y) && (y <= dy) && (dzn <= z) && (z <= dz)){
+            cpt_rot++;
+            // compteur d'échantillon total * période aquisition = temps 1 rotation
+            per_rotat = cpt_ech * 10; 
+
+            SYS_CONSOLE_PRINT("\r\n compteur de rotation \r\n");
+            SYS_CONSOLE_PRINT("%d \r\n",cpt_rot);
+//            rpm = 60000 / per_rotat;
+//            SYS_CONSOLE_PRINT("\r\n rotation par minute \r\n");
+//            SYS_CONSOLE_PRINT("%d \r\n ",rpm);
+            cpt_ech = 0;
+            y = 0;
+            z = 0;
+        }
+    ///////////////////////////////////////////////////////////////////
+    
+//    switch (accl.state){
+//        case Init:
+//            
+//            if (accXf > negatif && accYf > negatif) {
+//                SYS_CONSOLE_PRINT("\r\n initialisation \r\n");
+//                accl.state = QUA1;
+//                
+//            }
+//            else {
+//                accl.state = Init;
+//            }
+//           
+//            break;
+//        case QUA1:
+//           
+//            if (accXf < negatif && accYf > negatif) {
+//                 SYS_CONSOLE_PRINT("\r\n Quadrant 1 \r\n");
+//                 accl.state = QUA2;
+//            }
+//            else {
+//                accl.state = QUA1;
+//            }
+//            
+//            break;
+//        case QUA2:
+//            
+//            if (accXf < negatif && accYf < negatif) {
+//                SYS_CONSOLE_PRINT("\r\n Quadrant 2 \r\n");
+//                 accl.state = QUA3;
+//            }
+//            else {
+//                accl.state = QUA2;
+//            }
+//            
+//            break;
+//        case (QUA3) :
+//            
+//            if (accXf > negatif && accYf < negatif) {
+//                SYS_CONSOLE_PRINT("\r\n Quadrant 3 \r\n");
+//                 accl.state = QUA4;
+//            }
+//            else {
+//                accl.state = QUA3;
+//            }
+//            
+//            break;
+//        case QUA4:
+//            
+//            if (accXf > negatif && accYf > negatif) {
+//                SYS_CONSOLE_PRINT("\r\n Quadrant 4 \r\n");
+//                accl.state = QUA1;
+//                cpt_rot++;
+//                // compteur d'échantillon total * période aquisition = temps 1 rotation
+//                per_rotat = cpt_ech * 10; 
+//                
+//                SYS_CONSOLE_PRINT("\r\n compteur de rotation \r\n");
+//                SYS_CONSOLE_PRINT("%d \r\n",cpt_rot);
+//                rpm = 60000 / per_rotat;
+//                SYS_CONSOLE_PRINT("\r\n rotation par minute \r\n");
+//                SYS_CONSOLE_PRINT("%d \r\n ",rpm);
+//                cpt_ech = 0;
+//               
+//            }
+//            else {
+//                accl.state = QUA4;
+//            }
+//            
+//            break;
+//    }
               
 }
 
