@@ -3,12 +3,12 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/src/UDP_app.c</file>
-            <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/test_IP_Harmony.X/rgbled.c</file>
-            <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/src/main.c</file>
-            <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/src/app_commands.c</file>
             <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/src/accel.c</file>
+            <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/test_IP_Harmony.X/rgbled.c</file>
             <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/test_IP_Harmony.X/rgbled.h</file>
+            <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/src/app_commands.c</file>
+            <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/src/main.c</file>
+            <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/src/UDP_app.c</file>
             <file>file:/C:/Users/lefeb/Documents/GitHub/P1_S4/P1_POWER/firmware/src/UDP_app.h</file>
         </group>
     </open-files>

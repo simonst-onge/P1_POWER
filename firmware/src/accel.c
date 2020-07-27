@@ -43,25 +43,50 @@ float fGRangeLSB;   // global variable used to pre-compute the value in g corres
 
 static volatile int Flag_1s = 0;
 
-volatile int Flag_rgb, Flag_acc = 0;
 int reset = 0;
+
+volatile int Flag_rgb = 0;
+
+volatile int Flag_acc = 0;
+
 int compteur_flag_accel=0;
-int per_rotat = 0;
+
 int indexPaquet=0;
+
 int e = 0;
-int rpm = 0;
+
 int tab[121];
+
 // compteur d'échantillon total 
 int cpt_ech = 0;
-// compteur_rotations
+
 int cpt_rot = 0;
+
+float per_rotat = 0.00;
 
 uint8_t accel_buffer[accel_buf_length];
 int32_t receive_buff[3][121];
+
+
 //Valeur filtrées provenant de la Zybo
-volatile signed int accXf, accYf, accZf; 
+
+volatile signed short accXf, accYf, accZf; 
+
+char* stringX;
+
+char* stringY;
+
+char* stringZ;
 
 ACC_DATA accl;
+
+volatile int Flag_interface = 0;
+volatile int count_interface = 0;
+volatile int count_metronome = 0;
+volatile int count_horloge = 0;
+
+volatile int RPM = 0;
+
 
 /* ------------------------------------------------------------ */
 /***	ACL_Init
@@ -94,7 +119,7 @@ void ACL_Init()
     ACL_SetRegister(ACL_CTRL_REG4, 0x01); //interrupt enable
     ACL_SetRegister(ACL_CTRL_REG5, 0);
     ACL_GetRegister(ACL_INT_SOURCE);
-    ACL_SetRegister(ACL_CTRL_REG1, 0x29); //12.5
+    ACL_SetRegister(ACL_CTRL_REG1, 0x01); //800 Hz
    
     //pic32
     IFS0bits.INT4IF = 0; //flag initialisé à 0
@@ -103,7 +128,6 @@ void ACL_Init()
     IEC0bits.INT4IE = 1; //enable interrupt
     
     accl.state = Init;
-   
 }
 
 /* ------------------------------------------------------------ */
@@ -131,10 +155,13 @@ void ACL_ConfigurePins()
 void __ISR(_EXTERNAL_4_VECTOR, IPL2AUTO) ACL_ISR(void)
 {
    Flag_1s = 1;            //indique à la boucle principale qu'on doit traiter
-   Flag_rgb = 1;
-   Flag_acc = 1; //indique à la boucle principale qu'on doit traiter
+   Flag_rgb = 1;            //indique à la boucle principale qu'on doit traiter
+   Flag_interface = 1;
+   Flag_acc = 1;
    IFS0bits.INT4IF = 0;     // clear interrupt flag
-   
+   count_interface++;
+   count_metronome++;
+   count_horloge++;
    ACL_ReadRawValues(accel_buffer);
    //SYS_CONSOLE_PRINT("accel\r\n");
 }
@@ -189,7 +216,7 @@ void accel_tasks()
     }
    
     
-    SSD_WriteDigitsGrouped(count++, 0x1); 
+    //SSD_WriteDigitsGrouped(count++, 0x1); 
     
     //if(SWITCH1StateGet()) //Pour afficher les donnees lorsquon joue avec la switch 1
     {
@@ -210,149 +237,7 @@ void accel_tasks()
     }
     }
 }
-
-void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont filtrées
-{
-//    int negatif = 0;
-    if (Flag_acc == 1){
-        Flag_acc = 0;
-        cpt_ech ++;
-        e ++;
-    
-    }
-    if(UDP_Receive_Packet == true)
-    {
-       memcpy(receive_buff[2],receive_buff[1],484);
-       memcpy(receive_buff[1],receive_buff[0],484);
-       memcpy(receive_buff[0],UDP_Receive_Buffer,484);
-       e = 0;
-
-    }
-    
-    if (reset == 1){
-        cpt_rot = 0;
-        cpt_ech = 0;
-        e = 0;
-        accXf = 0;
-        accYf = 0;
-        accZf = 0;
-//        accl.state = Init;
-    }
-    if(receive_buff[2][0] != 0){
-        accXf = (signed int)receive_buff[2][e+1]; 
-        accYf = (signed int)receive_buff[2][e+41];
-        accZf = (signed int)receive_buff[2][e+81];
-    }
-    else{
-        accXf = 0;
-        accYf = 0;
-        accZf = 0;
-        cpt_ech = 0;
-        e = 0;
-    }
-    
-    if (e == 120){
-        e = 0;
-    }
-
-    ///////////////////////////////////////////////////////////////////
-    // sommation pour l'intégrale de parcours 
-    int y = 0;
-    int z = 0;
-    int i = 0;
-    int dy, dz = 400;
-    int dyn, dzn = -400;
-    for (i = 0; i < 40; i++){
-        y += (signed int)receive_buff[2][i+41];
-        z += (signed int)receive_buff[2][i+81];
-    }
-    if ((dyn <= y) && (y <= dy) && (dzn <= z) && (z <= dz)){
-            cpt_rot++;
-            // compteur d'échantillon total * période aquisition = temps 1 rotation
-            per_rotat = cpt_ech * 10; 
-
-            SYS_CONSOLE_PRINT("\r\n compteur de rotation \r\n");
-            SYS_CONSOLE_PRINT("%d \r\n",cpt_rot);
-//            rpm = 60000 / per_rotat;
-//            SYS_CONSOLE_PRINT("\r\n rotation par minute \r\n");
-//            SYS_CONSOLE_PRINT("%d \r\n ",rpm);
-            cpt_ech = 0;
-            y = 0;
-            z = 0;
-        }
-    ///////////////////////////////////////////////////////////////////
-    
-//    switch (accl.state){
-//        case Init:
-//            
-//            if (accXf > negatif && accYf > negatif) {
-//                SYS_CONSOLE_PRINT("\r\n initialisation \r\n");
-//                accl.state = QUA1;
-//                
-//            }
-//            else {
-//                accl.state = Init;
-//            }
-//           
-//            break;
-//        case QUA1:
-//           
-//            if (accXf < negatif && accYf > negatif) {
-//                 SYS_CONSOLE_PRINT("\r\n Quadrant 1 \r\n");
-//                 accl.state = QUA2;
-//            }
-//            else {
-//                accl.state = QUA1;
-//            }
-//            
-//            break;
-//        case QUA2:
-//            
-//            if (accXf < negatif && accYf < negatif) {
-//                SYS_CONSOLE_PRINT("\r\n Quadrant 2 \r\n");
-//                 accl.state = QUA3;
-//            }
-//            else {
-//                accl.state = QUA2;
-//            }
-//            
-//            break;
-//        case (QUA3) :
-//            
-//            if (accXf > negatif && accYf < negatif) {
-//                SYS_CONSOLE_PRINT("\r\n Quadrant 3 \r\n");
-//                 accl.state = QUA4;
-//            }
-//            else {
-//                accl.state = QUA3;
-//            }
-//            
-//            break;
-//        case QUA4:
-//            
-//            if (accXf > negatif && accYf > negatif) {
-//                SYS_CONSOLE_PRINT("\r\n Quadrant 4 \r\n");
-//                accl.state = QUA1;
-//                cpt_rot++;
-//                // compteur d'échantillon total * période aquisition = temps 1 rotation
-//                per_rotat = cpt_ech * 10; 
-//                
-//                SYS_CONSOLE_PRINT("\r\n compteur de rotation \r\n");
-//                SYS_CONSOLE_PRINT("%d \r\n",cpt_rot);
-//                rpm = 60000 / per_rotat;
-//                SYS_CONSOLE_PRINT("\r\n rotation par minute \r\n");
-//                SYS_CONSOLE_PRINT("%d \r\n ",rpm);
-//                cpt_ech = 0;
-//               
-//            }
-//            else {
-//                accl.state = QUA4;
-//            }
-//            
-//            break;
-//    }
-              
-}
+ 
 
 
 /* ------------------------------------------------------------ */
@@ -589,10 +474,268 @@ void ACL_ReadGValues(float *rgGVals)
 **      
 **          
 */
+
+void accel_rotation(void) //prend les valeurs qui arrive de la Zybo qui sont filtrées
+{
+    int negatif = 0; 
+    if (Flag_acc == 1){
+        Flag_acc = 0;
+        cpt_ech ++;
+        e ++;
+    
+    }
+    if(UDP_Receive_Packet == true)
+    {
+       memcpy(receive_buff[2],receive_buff[1],484);
+       memcpy(receive_buff[1],receive_buff[0],484);
+       memcpy(receive_buff[0],UDP_Receive_Buffer,484);
+       e = 0;
+
+
+    }
+    
+    if (reset == 1){
+        cpt_rot = 0;
+        cpt_ech = 0;
+        e = 0;
+        accXf = 0;
+        accYf = 0;
+        accZf = 0;
+        accl.state = Init;
+    }
+    if(receive_buff[2][0] != 0){
+        accXf = receive_buff[2][e+1];
+        accYf = receive_buff[2][e+41];
+        accZf = receive_buff[2][e+81];
+        
+    }
+    else{
+        accXf = 0;
+        accYf = 0;
+        accZf = 0;
+        cpt_ech = 0;
+        e = 0;
+    }
+    //SYS_CONSOLE_PRINT("%d \r\n", accZf);
+    /*if (accXf > 536870000){
+        accXf = -1;//(accXf >> 1) * (-1);
+    }
+    else
+        accXf = 1;
+    if (accYf > 536870000){
+        accYf = -1;//(accYf >> 1) * (-1);
+    }
+    else
+        accYf = 1;
+    if (accZf > 536870000){
+        accZf = -1;//(accZf >> 1) * (-1);
+    }
+    else
+        accZf = 1;*/
+    if (e == 120){
+        e = 0;
+    }
+    int ind;
+    float rpm_mean[10];
+    float rpm = 0;
+    int i = 0;
+    int inverse = 0;    
+    switch (accl.state){
+        case Init:
+            //SYS_CONSOLE_PRINT("\r\n init \r\n");
+            if (accXf < negatif && (accYf > negatif)){ //|| accZf < negatif)){
+                //SYS_CONSOLE_PRINT("\r\n initialisation \r\n");
+                //SYS_CONSOLE_PRINT("\r\n accZf : %f \r\n",accZf);
+                //SYS_CONSOLE_PRINT("\r\n accZf : %f \r\n",accXf);
+                accl.state = QUA1;
+
+            }
+            else if (accXf < negatif && (accYf < negatif)){// || accZf > negatif)){
+               //SYS_CONSOLE_PRINT("\r\n inverse \r\n");
+               accl.state = QUA4i; 
+                //SYS_CONSOLE_PRINT("\r\n accZf : %f \r\n",accZf);
+                //SYS_CONSOLE_PRINT("\r\n accZf : %f \r\n",accXf);
+            }
+            
+            else {
+               accl.state = Init;
+               //SYS_CONSOLE_PRINT("\r\n accZf : %f \r\n",accZf);
+                //SYS_CONSOLE_PRINT("\r\n accZf : %f \r\n",accXf);
+                
+            }
+           
+            break;
+        case QUA1:
+
+            if (accXf < negatif && (accYf < negatif)){ //|| accZf < negatif)){
+                
+                SYS_CONSOLE_PRINT("\r\n Quadrant 1 \r\n");
+                 accl.state = QUA2;
+                 
+            }
+            else if (accXf > negatif && (accYf < negatif)){ //|| accZf > negatif)){
+                accl.state = QUA4i;
+            }
+            else {
+                accl.state = QUA1;
+            }
+            
+            break;
+        case QUA2:
+            
+            if (accXf > negatif && (accYf < negatif)){// || accZf > negatif)) {
+               
+                SYS_CONSOLE_PRINT("\r\n Quadrant 2 \r\n");
+                accl.state = QUA3;
+                
+            }
+            else if (accXf > negatif && (accYf > negatif)){ // || accZf < negatif)){
+                accl.state = QUA1i;
+            }
+            else {
+                accl.state = QUA2;
+            }
+            
+            break;
+        case (QUA3) :
+            
+            if (accXf > negatif && (accYf > negatif )){//|| accZf > negatif)) {
+                
+                SYS_CONSOLE_PRINT("\r\n Quadrant 3 \r\n");
+                 accl.state = QUA4;
+                
+            }    
+            else if (accXf < negatif && (accYf > negatif )){//|| accZf < negatif)){
+                accl.state = QUA2i;
+            }
+            else {
+                accl.state = QUA3;
+            }
+            break;
+        case QUA4:
+            
+            if (accXf < negatif && (accYf > negatif)){ // || accZf < negatif)) {
+                
+                SYS_CONSOLE_PRINT("\r\n Quadrant 4 \r\n");
+                accl.state = QUA1;
+                cpt_rot++;
+                // compteur d'échantillon total * période aquisition = temps 1 rotation
+                per_rotat = cpt_ech / 800.0;
+                //SYS_CONSOLE_PRINT("\r\n compteur de rotation \r\n");
+                //SYS_CONSOLE_PRINT("%d \r\n", cpt_rot); 
+                rpm = 60 / per_rotat;
+                //SYS_CONSOLE_PRINT("\r\n nombre d'echantillon de la periode \r\n");
+                //SYS_CONSOLE_PRINT("%d \r\n", cpt_ech);
+                cpt_ech = 0;
+                //SYS_CONSOLE_PRINT("\r\n periode de rotation en seconde \r\n");               
+                //SYS_CONSOLE_PRINT("%3.6f \r\n", per_rotat);
+                SYS_CONSOLE_PRINT("\r\n nombre de rotation par minutes \r\n");
+                SYS_CONSOLE_PRINT("%3.6f \r\n", rpm);
+                RPM = (rpm+0.5);
+                SYS_CONSOLE_PRINT("\r\n rpm : %d \r\n",RPM);
+            }
+            
+            else if (accXf < negatif && (accYf < negatif)){ // || accZf > negatif)){
+                accl.state = QUA3i;
+            }
+            else {
+                accl.state = QUA4;
+            }            
+            
+            break;
+            
+        case QUA4i:
+            if (accXf < negatif && (accYf > negatif)){ //|| accZf < negatif)){
+                
+                SYS_CONSOLE_PRINT("\r\n Quadrant 1 inv \r\n");
+                 accl.state = QUA3i;
+                 
+            }
+            else if (accXf > negatif && (accYf > negatif)){ //|| accZf > negatif)){
+                accl.state = QUA1;
+            }
+            else {
+                accl.state = QUA4i;
+            }
+           
+            break;
+        case QUA3i:
+            if (accXf > negatif && (accYf > negatif)){ //|| accZf < negatif)){
+                
+                SYS_CONSOLE_PRINT("\r\n Quadrant 2 inv \r\n");
+                 accl.state = QUA2i;
+                 
+            }
+            else if (accXf > negatif && (accYf < negatif)){ //|| accZf > negatif)){
+                accl.state = QUA4;
+            }
+            else {
+                accl.state = QUA3i;
+            }
+            
+            break;
+        case QUA2i :
+            if (accXf > negatif && (accYf < negatif)){ //|| accZf < negatif)){
+                
+                SYS_CONSOLE_PRINT("\r\n Quadrant 3 inv \r\n");
+                 accl.state = QUA1i;
+                 
+            }
+            else if (accXf < negatif && (accYf < negatif)){ //|| accZf > negatif)){
+                accl.state = QUA3;
+            }
+            else {
+                accl.state = QUA2i;
+            }
+            
+            break;
+        case QUA1i:
+            if (accXf < negatif && (accYf < negatif)){ //|| accZf < negatif)){
+
+                SYS_CONSOLE_PRINT("\r\n Quadrant 4 inv \r\n");
+                accl.state = QUA4i;
+                cpt_rot++;
+                // compteur d'échantillon total * période aquisition = temps 1 rotation
+                per_rotat = cpt_ech / 800.0;
+                //SS_CONSOLE_PRINT("\r\n compteur de rotation \r\n");
+                //SYS_CONSOLE_PRINT("%d \r\n", cpt_rot); 
+
+                /*rpm_mean[ind] = rpm;
+                ind++;
+                if(ind == 9){
+                    while(ind >= 0){                        
+                        rpm += rpm_mean[ind];
+                        ind--;
+                    }
+                    rpm /= 10.0;
+                }*/                    
+                //SYS_CONSOLE_PRINT("\r\n nombre d'echantillon de la periode \r\n");
+                //SYS_CONSOLE_PRINT("%d \r\n", cpt_ech);
+                cpt_ech = 0;
+                //SYS_CONSOLE_PRINT("\r\n periode de rotation en seconde \r\n");               
+                //SYS_CONSOLE_PRINT("%3.6f \r\n", per_rotat);
+                SYS_CONSOLE_PRINT("\r\n nombre de rotation par minutes \r\n");
+                SYS_CONSOLE_PRINT("%3.6f \r\n", rpm); 
+                RPM = (rpm+0.5);
+                SYS_CONSOLE_PRINT("\r\n rpm : %d \r\n",RPM);
+            }
+            else if (accXf < negatif && (accYf > negatif)){ //|| accZf > negatif)){
+                accl.state = QUA2;
+            }
+            else {
+                accl.state = QUA1i;
+            }            
+                     
+            break;
+    }
+              
+}
+
 void ACL_Close()
 {
     I2C1CONbits.ON = 0;     //Disable the I2C module 
 }
+
 
 /* *****************************************************************************
  End of File
